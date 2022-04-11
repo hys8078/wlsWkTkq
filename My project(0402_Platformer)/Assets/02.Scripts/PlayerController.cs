@@ -2,23 +2,17 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-//유한상태머신 
-//상태가 정해져있음
-
-
 public class PlayerController : MonoBehaviour
 {
     private Rigidbody2D rb;
     private Animator animator;
     private GroundDetector groundDetector;
     public float jumpForce;
-    Vector2 move;
-    public float moveSpeed; //스피드를 쉽게 조절하기위해public
+    public float moveSpeed;
     private float moveInputOffset = 0.1f;
+    Vector2 move;
 
-
-    int _direction; //+1 :right , -1:left 가 되게 할거임
-
+    int _direction; // + 1 : right, - 1 : left
     public int direction
     {
         set
@@ -46,82 +40,78 @@ public class PlayerController : MonoBehaviour
 
     private void Awake()
     {
-
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponentInChildren<Animator>();
         groundDetector = GetComponent<GroundDetector>();
     }
-
-    // Update is called once per frame
     private void Update()
     {
-        float h = Input.GetAxis("Horizontal"); //수평입력받음
+        float h = Input.GetAxis("Horizontal");
 
-        //방향전환
+        // 방향전환
         if (h < 0) direction = -1;
         else if (h > 0) direction = 1;
 
         if (Mathf.Abs(h) > moveInputOffset)
         {
             move.x = h;
-            if (state == PlayerState.idle)
+            if (state == PlayerState.Idle)
                 ChangePlayerState(PlayerState.Run);
-        } //Mathf.Abs 는 절댓값의미
-
+        }
         else
         {
             move.x = 0;
             if (state == PlayerState.Run)
-                ChangePlayerState(PlayerState.idle);
+                ChangePlayerState(PlayerState.Idle);
         }
-        //점프키
+
+        // 점프 키
         if (Input.GetKeyDown(KeyCode.LeftAlt))
         {
-            if (groundDetector.isDestected &&
-                state != PlayerState.Jump &&
-                state != PlayerState.Fall)
+            if (groundDetector.isDetected &&
+               state != PlayerState.Jump &&
+               state != PlayerState.Fall)
             {
                 ChangePlayerState(PlayerState.Jump);
             }
         }
 
-        UpdatePlayerState();                                        //이게 이해가안되면 애니메이터를보셈//그걸 스크립트로 구현한것.
-                                                                                                                         //if문이 다끝나면 workFlow실행
+        UpdatePlayerState();
     }
+
     private void FixedUpdate()
     {
-
-        rb.position += new Vector2(move.x * moveSpeed, move.y) * Time.fixedDeltaTime; //이동
+        rb.position += new Vector2(move.x * moveSpeed, move.y) * Time.fixedDeltaTime;
     }
 
     public void ChangePlayerState(PlayerState newState)
     {
         if (state == newState) return;
-        //이전 상태 하위 머신 초기화
+
+        // 이전 상태 하위 머신 초기화
         switch (state)
         {
-            case PlayerState.idle:
+            case PlayerState.Idle:
                 break;
             case PlayerState.Run:
                 break;
             case PlayerState.Jump:
-                jumpState = JumpState.idle;
+                jumpState = JumpState.Idle;
                 break;
             case PlayerState.Fall:
-                fallState = FallState.idle;
+                fallState = FallState.Idle;
                 break;
             default:
                 break;
-            
         }
 
-        //현재 상태  바꿈
-        state= newState;
+        // 현재 상태 바꿈
+        state = newState;
 
-        //현재 상태 하위 머신 준비
+        // 현재 상태 하위 머신 준비
         switch (state)
         {
-            case PlayerState.idle:
+            case PlayerState.Idle:
                 break;
             case PlayerState.Run:
                 break;
@@ -133,21 +123,18 @@ public class PlayerController : MonoBehaviour
                 break;
             default:
                 break;
-
         }
-
     }
-
 
     private void UpdatePlayerState()
     {
         switch (state)
         {
-            case PlayerState.idle:
-                animator.Play("idle");  //UpdateidleState();
+            case PlayerState.Idle:
+                //UpdateIdleState();
                 break;
             case PlayerState.Run:
-                animator.Play("Run");
+                //UpdateRunState();
                 break;
             case PlayerState.Jump:
                 UpdateJumpState();
@@ -158,54 +145,45 @@ public class PlayerController : MonoBehaviour
             default:
                 break;
         }
-
-    }
-    private void UpdateIdleState()
-    {
-        
-
     }
 
     private void UpdateJumpState()
     {
         switch (jumpState)
         {
-            case JumpState.idle:
+            case JumpState.Idle:
                 break;
             case JumpState.Prepare:
                 animator.Play("Jump");
                 rb.velocity = new Vector2(rb.velocity.x, 0);
                 rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
                 jumpTimer = jumpTime;
-                fallState++;
+                jumpState++;
                 break;
-            case JumpState.Casting:  //발이 땅에서 떨어졌는지 확인
-                if(!groundDetector.isDestected)
+            case JumpState.Casting:
+                if (!groundDetector.isDetected)
                     jumpState++;
-                else if(jumpTimer<0)
-                    ChangePlayerState(PlayerState.idle);
+                else if (jumpTimer < 0)
+                    ChangePlayerState(PlayerState.Idle);
+                jumpTimer -= Time.deltaTime;
                 break;
             case JumpState.OnAction:
                 if (rb.velocity.y < 0)
-                {
                     jumpState++;
-                }
                 break;
             case JumpState.Finish:
-                ChangePlayerState(PlayerState.idle);
+                ChangePlayerState(PlayerState.Fall);
                 break;
             default:
                 break;
-
         }
     }
-
 
     private void UpdateFallState()
     {
         switch (fallState)
         {
-            case FallState.idle:
+            case FallState.Idle:
                 break;
             case FallState.Prepare:
                 animator.Play("Fall");
@@ -215,38 +193,31 @@ public class PlayerController : MonoBehaviour
                 fallState++;
                 break;
             case FallState.OnAction:
-                if (groundDetector.isDestected)
+                if (groundDetector.isDetected)
                     fallState++;
                 break;
             case FallState.Finish:
-                ChangePlayerState(PlayerState.idle);
+                ChangePlayerState(PlayerState.Idle);
                 break;
             default:
                 break;
         }
-
     }
 
-    
-
-    
 
 }
 
-
-//enum : 열거형
 public enum PlayerState
 {
-    idle,
+    Idle,
     Run,
     Jump,
     Fall
-
 }
 
 public enum JumpState
 {
-    idle,
+    Idle,
     Prepare,
     Casting,
     OnAction,
@@ -255,10 +226,9 @@ public enum JumpState
 
 public enum FallState
 {
-    idle,
+    Idle,
     Prepare,
     Casting,
     OnAction,
     Finish,
-
 }
